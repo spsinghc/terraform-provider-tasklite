@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"terraform-provider-tasklite/internal/task"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -44,6 +45,7 @@ func (p *taskLiteProvider) Schema(_ context.Context, _ provider.SchemaRequest, r
 
 // Configure prepares a taskLite API client for data sources and resources.
 func (p *taskLiteProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	tflog.Debug(ctx, "Configuring Tasklite client")
 	// Retrieve provider data from configuration
 	var config hashicupsProviderModel
 	diags := req.Config.Get(ctx, &config)
@@ -52,7 +54,7 @@ func (p *taskLiteProvider) Configure(ctx context.Context, req provider.Configure
 		return
 	}
 
-	if config.Host.IsUnknown() || config.Host.IsNull() {
+	if config.Host.IsUnknown() || config.Host.IsNull() || config.Host.ValueString() == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("host"),
 			"TaskLite API Host is unknown or empty",
@@ -69,6 +71,9 @@ func (p *taskLiteProvider) Configure(ctx context.Context, req provider.Configure
 	client := task.NewClient(config.Host.ValueString())
 
 	resp.ResourceData = client
+
+	ctx = tflog.SetField(ctx, "Tasklite host", config.Host)
+	tflog.Debug(ctx, "Configured Tasklite client", map[string]any{"success": true})
 }
 
 // DataSources defines the data sources implemented in the provider.

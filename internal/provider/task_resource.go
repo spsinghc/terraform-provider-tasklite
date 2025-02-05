@@ -3,12 +3,13 @@ package provider
 import (
 	"context"
 	"fmt"
-
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"terraform-provider-tasklite/internal/task"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
@@ -30,6 +31,7 @@ func (r *taskResource) Metadata(_ context.Context, req resource.MetadataRequest,
 	resp.TypeName = req.ProviderTypeName + "_task"
 }
 
+// TODO set default values for priority and completed
 // Schema defines the schema for the resource.
 func (r *taskResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
@@ -40,11 +42,21 @@ func (r *taskResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"id": schema.Int32Attribute{
 				Computed: true,
 			},
+			"priority": schema.Int32Attribute{
+				Optional: true,
+				Computed: true,
+				Default:  int32default.StaticInt32(0),
+			},
+			"completed": schema.BoolAttribute{
+				Optional: true,
+				Computed: true,
+				Default:  booldefault.StaticBool(false),
+			},
 		},
 	}
 }
 
-func (r *taskResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *taskResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -66,31 +78,36 @@ func (r *taskResource) Configure(ctx context.Context, req resource.ConfigureRequ
 
 // Create creates the resource and sets the initial Terraform state.
 func (r *taskResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data taskModel
-
-	// Read Terraform data data into the model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	var plan taskModel
+	// Read Terraform data into the model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	res, err := r.client.CreateTask(ctx, data.Title.ValueString())
+	// Set default values if not provided
+	if plan.Priority.IsNull() {
+		plan.Priority = types.Int32Value(0)
+	}
+	if plan.Completed.IsNull() {
+		plan.Completed = types.BoolValue(false)
+	}
+
+	tflog.Debug(ctx, "Creating task", map[string]any{"task": plan})
+	t, err := r.client.CreateTask(ctx, mapTaskModelToTask(plan))
 
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Failed to create task",
-			err.Error(),
-		)
+		// tflog.Error(ctx, "Failed to create the task", map[string]interface{}{"error": err})
+		// resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Failed to create the task, got error: %s", err))
+
+		logErrorAndAddDiagnostic(ctx, req, resp, err)
 		return
 	}
 
-	data.ID = types.Int32Value(res.ID)
-
-	tflog.Trace(ctx, "created a resource")
-
-	// Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	tflog.Debug(ctx, "Task created", map[string]any{"task": t})
+	s := mapTaskToTaskModel(t)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &s)...)
 
 	if resp.Diagnostics.HasError() {
 		tflog.Error(ctx, "An error return while saving state")
@@ -100,33 +117,121 @@ func (r *taskResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 // Read refreshes the Terraform state with the latest data.
 func (r *taskResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	// not supported by the api
+	var state taskModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	tflog.Debug(ctx, "Refreshing task with the server data", map[string]interface{}{
+		"ID": state.ID.ValueInt32(),
+	})
+
+	// get refreshed task from the api
+	t, err := r.client.ReadTask(ctx, state.ID.ValueInt32())
+
+	if err != nil {
+		// tflog.Error(ctx, "Failed to read the task", map[string]interface{}{"error": err})
+		// resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Failed to read the task, got error: %s", err))
+		logErrorAndAddDiagnostic(ctx, req, resp, err)
+		return
+	}
+
+	state = mapTaskToTaskModel(t)
+
+	// set refreshed state
+	resp.Diagnostics.Append(req.State.Set(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 func (r *taskResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// not supported by the api
+	var state taskModel
+	// read Terraform state
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var plan taskModel
+	// read Terraform plan into the model
+	resp.Diagnostics.Append(req.State.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if state.ID.ValueInt32() == 0 {
+		logErrorAndAddDiagnostic(ctx, req, resp, fmt.Errorf("unexpected task ID %d found in the terraform state", state.ID.ValueInt32()))
+		return
+	}
+	plan.ID = state.ID
+
+	tflog.Debug(ctx, "Updating task", map[string]any{"task": plan})
+
+	t, err := r.client.UpdateTask(ctx, mapTaskModelToTask(plan))
+
+	if err != nil {
+		// tflog.Error(ctx, "Failed to update the task", map[string]interface{}{"error": err})
+		// resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Failed to update the task, got error: %s", err))
+		logErrorAndAddDiagnostic(ctx, req, resp, err)
+		return
+	}
+
+	plan = mapTaskToTaskModel(t)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		tflog.Error(ctx, "An error return while saving state")
+		return
+	}
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *taskResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data taskModel
-
-	// Read Terraform prior state data into the model
-	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	var state taskModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Log the data being read
-	tflog.Debug(ctx, "Read resource data", map[string]interface{}{
-		"ID": data.ID.ValueInt32(),
+	tflog.Debug(ctx, "Deleting task", map[string]interface{}{
+		"ID": state.ID.ValueInt32(),
 	})
 
-	err := r.client.DeleteTask(ctx, data.ID.ValueInt32())
+	err := r.client.DeleteTask(ctx, state.ID.ValueInt32())
 
 	if err != nil {
-		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete task, got error: %s", err))
+		// tflog.Error(ctx, "Failed to delete the task", map[string]interface{}{"error": err})
+		// resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Failed to delete the task, got error: %s", err))
+		logErrorAndAddDiagnostic(ctx, req, resp, err)
 		return
 	}
+}
+
+func logErrorAndAddDiagnostic(ctx context.Context, req any, resp any, err error) {
+	operation := ""
+	switch req.(type) {
+	case resource.CreateRequest:
+		operation = "Create"
+		if respPtr, ok := resp.(*resource.CreateResponse); ok {
+			respPtr.Diagnostics.AddError(fmt.Sprintf("%s Operation Error", operation), fmt.Sprintf("Failed to %s the task, got error: %s", operation, err))
+		}
+	case resource.ReadRequest:
+		operation = "Read"
+		if respPtr, ok := resp.(*resource.ReadResponse); ok {
+			respPtr.Diagnostics.AddError(fmt.Sprintf("%s Operation Error", operation), fmt.Sprintf("Failed to %s the task, got error: %s", operation, err))
+		}
+	case resource.UpdateRequest:
+		operation = "Update"
+		if respPtr, ok := resp.(*resource.UpdateResponse); ok {
+			respPtr.Diagnostics.AddError(fmt.Sprintf("%s Operation Error", operation), fmt.Sprintf("Failed to %s the task, got error: %s", operation, err))
+		}
+	case resource.DeleteRequest:
+		operation = "Delete"
+		if respPtr, ok := resp.(*resource.DeleteResponse); ok {
+			respPtr.Diagnostics.AddError(fmt.Sprintf("%s Operation Error", operation), fmt.Sprintf("Failed to %s the task, got error: %s", operation, err))
+		}
+	}
+	tflog.Error(ctx, fmt.Sprintf("Failed to %s the task", operation), map[string]interface{}{"error": err})
 }

@@ -10,8 +10,10 @@ import (
 )
 
 type Task struct {
-	ID    int32  `json:"id,omitempty"`
-	Title string `json:"title"`
+	ID        int32  `json:"id,omitempty"`
+	Title     string `json:"title"`
+	Completed bool   `json:"completed"`
+	Priority  int32  `json:"priority"`
 }
 
 type Client struct {
@@ -32,25 +34,53 @@ func apiPath(baseURL string) string {
 	return fmt.Sprintf("%s%s", baseURL, TASK_URI)
 }
 
-func (c *Client) CreateTask(ctx context.Context, title string) (*Task, error) {
-	taskRequest := &Task{Title: title}
-	resp, err := c.doRequest(ctx, http.MethodPost, apiPath(c.BaseURL), taskRequest)
+func (c *Client) CreateTask(ctx context.Context, t Task) (*Task, error) {
+	resp, err := c.doRequest(ctx, http.MethodPost, apiPath(c.BaseURL), t)
 	if err != nil {
 		return nil, err
 	}
 
-	var createdTask Task
-	if err := c.parseResponse(resp, &createdTask); err != nil {
+	var tt Task
+	if err := c.parseResponse(resp, &tt); err != nil {
 		return nil, err
 	}
 
-	return &createdTask, nil
+	return &tt, nil
+}
+
+func (c *Client) ReadTask(ctx context.Context, id int32) (*Task, error) {
+	url := fmt.Sprintf("%s%d/", apiPath(c.BaseURL), id)
+	resp, err := c.doRequest(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var t Task
+	if err := c.parseResponse(resp, &t); err != nil {
+		return nil, err
+	}
+
+	return &t, nil
+}
+
+func (c *Client) UpdateTask(ctx context.Context, t Task) (*Task, error) {
+	url := fmt.Sprintf("%s%d", apiPath(c.BaseURL), t.ID)
+
+	resp, err := c.doRequest(ctx, http.MethodPut, url, t)
+	if err != nil {
+		return nil, err
+	}
+
+	var tt Task
+	if err := c.parseResponse(resp, &t); err != nil {
+		return nil, err
+	}
+
+	return &tt, nil
 }
 
 func (c *Client) DeleteTask(ctx context.Context, id int32) error {
-
 	url := fmt.Sprintf("%s%d/", apiPath(c.BaseURL), id)
-
 	resp, err := c.doRequest(ctx, http.MethodDelete, url, nil)
 
 	if err != nil {
