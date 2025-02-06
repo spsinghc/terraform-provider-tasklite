@@ -38,7 +38,8 @@ func (p *taskLiteProvider) Schema(_ context.Context, _ provider.SchemaRequest, r
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"host": schema.StringAttribute{
-				Required: true,
+				Description: "URI for TaskLite API.",
+				Required:    true,
 			},
 		},
 	}

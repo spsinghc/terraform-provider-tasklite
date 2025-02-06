@@ -23,7 +23,7 @@ func NewTaskResource() resource.Resource {
 }
 
 type taskResource struct {
-	client *task.Client
+	client task.ClientInterface
 }
 
 // Metadata returns the resource type name.
@@ -36,20 +36,24 @@ func (r *taskResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"title": schema.StringAttribute{
-				Required: true,
+				Description: "Title of the title",
+				Required:    true,
 			},
 			"id": schema.Int32Attribute{
-				Computed: true,
+				Description: "Numeric identifier of the task., will be auto-generate by task api",
+				Computed:    true,
 			},
 			"priority": schema.Int32Attribute{
-				Optional: true,
-				Computed: true,
-				Default:  int32default.StaticInt32(0),
+				Description: "Priority of the task. Default is 0",
+				Optional:    true,
+				Computed:    true,
+				Default:     int32default.StaticInt32(0),
 			},
 			"complete": schema.BoolAttribute{
-				Optional: true,
-				Computed: true,
-				Default:  booldefault.StaticBool(false),
+				Description: "Complete of the task. Default is false",
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(false),
 			},
 		},
 	}

@@ -4,6 +4,7 @@
 package provider
 
 import (
+	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
@@ -11,11 +12,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
 )
 
+const (
+	providerConfig = `
+provider "tasklite" {
+  host = "http://127.0.0.1:3000"
+}`
+)
+
 // testAccProtoV6ProviderFactories is used to instantiate a provider during acceptance testing.
 // The factory function is called for each Terraform CLI command to create a provider
 // server that the CLI can connect to and interact with.
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
-	"scaffolding": providerserver.NewProtocol6WithError(New("test")()),
+	"tasklite": providerserver.NewProtocol6WithError(New("test")()),
 }
 
 // testAccProtoV6ProviderFactoriesWithEcho includes the echo provider alongside the scaffolding provider.
@@ -28,6 +36,8 @@ var testAccProtoV6ProviderFactoriesWithEcho = map[string]func() (tfprotov6.Provi
 }
 
 func testAccPreCheck(t *testing.T) {
+	_ = os.Setenv("TF_ACC", "1")
+
 	// You can add code here to run prior to any test case execution, for example assertions
 	// about the appropriate environment variables being set are common to see in a pre-check
 	// function.

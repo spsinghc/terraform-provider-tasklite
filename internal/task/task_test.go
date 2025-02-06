@@ -108,7 +108,7 @@ func TestUpdateTask(t *testing.T) {
 }
 
 func TestDeleteTask(t *testing.T) {
-	server := setupTestServer(t, http.MethodDelete, nil, http.StatusOK)
+	server := setupTestServer(t, http.MethodDelete, nil, http.StatusNoContent)
 	defer server.Close()
 
 	err := (NewClient(server.URL)).DeleteTask(context.Background(), 1)

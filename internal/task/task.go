@@ -16,6 +16,13 @@ type Task struct {
 	Priority int32  `json:"priority"`
 }
 
+type ClientInterface interface {
+	CreateTask(ctx context.Context, t Task) (*Task, error)
+	ReadTask(ctx context.Context, id int32) (*Task, error)
+	UpdateTask(ctx context.Context, t Task) (*Task, error)
+	DeleteTask(ctx context.Context, id int32) error
+}
+
 type Client struct {
 	BaseURL    string
 	HTTPClient *http.Client

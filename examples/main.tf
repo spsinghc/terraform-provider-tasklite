@@ -12,4 +12,6 @@ provider "tasklite" {
 
 resource "tasklite_task" "t1" {
    title = "Task updated by terraform"
+   priority = 5 # default is 0
+   complete = true # default is false
 }
