@@ -3,14 +3,14 @@ package provider
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
-	"github.com/hashicorp/terraform-plugin-framework/types"
-	"terraform-provider-tasklite/internal/task"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"terraform-provider-tasklite/internal/task"
 )
 
 var (
@@ -31,7 +31,6 @@ func (r *taskResource) Metadata(_ context.Context, req resource.MetadataRequest,
 	resp.TypeName = req.ProviderTypeName + "_task"
 }
 
-// TODO set default values for priority and completed
 // Schema defines the schema for the resource.
 func (r *taskResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
@@ -47,7 +46,7 @@ func (r *taskResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Computed: true,
 				Default:  int32default.StaticInt32(0),
 			},
-			"completed": schema.BoolAttribute{
+			"complete": schema.BoolAttribute{
 				Optional: true,
 				Computed: true,
 				Default:  booldefault.StaticBool(false),
@@ -86,21 +85,10 @@ func (r *taskResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	// Set default values if not provided
-	if plan.Priority.IsNull() {
-		plan.Priority = types.Int32Value(0)
-	}
-	if plan.Completed.IsNull() {
-		plan.Completed = types.BoolValue(false)
-	}
-
 	tflog.Debug(ctx, "Creating task", map[string]any{"task": plan})
 	t, err := r.client.CreateTask(ctx, mapTaskModelToTask(plan))
 
 	if err != nil {
-		// tflog.Error(ctx, "Failed to create the task", map[string]interface{}{"error": err})
-		// resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Failed to create the task, got error: %s", err))
-
 		logErrorAndAddDiagnostic(ctx, req, resp, err)
 		return
 	}
@@ -131,8 +119,6 @@ func (r *taskResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	t, err := r.client.ReadTask(ctx, state.ID.ValueInt32())
 
 	if err != nil {
-		// tflog.Error(ctx, "Failed to read the task", map[string]interface{}{"error": err})
-		// resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Failed to read the task, got error: %s", err))
 		logErrorAndAddDiagnostic(ctx, req, resp, err)
 		return
 	}
@@ -156,7 +142,7 @@ func (r *taskResource) Update(ctx context.Context, req resource.UpdateRequest, r
 
 	var plan taskModel
 	// read Terraform plan into the model
-	resp.Diagnostics.Append(req.State.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -172,8 +158,6 @@ func (r *taskResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	t, err := r.client.UpdateTask(ctx, mapTaskModelToTask(plan))
 
 	if err != nil {
-		// tflog.Error(ctx, "Failed to update the task", map[string]interface{}{"error": err})
-		// resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Failed to update the task, got error: %s", err))
 		logErrorAndAddDiagnostic(ctx, req, resp, err)
 		return
 	}
@@ -202,8 +186,6 @@ func (r *taskResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	err := r.client.DeleteTask(ctx, state.ID.ValueInt32())
 
 	if err != nil {
-		// tflog.Error(ctx, "Failed to delete the task", map[string]interface{}{"error": err})
-		// resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Failed to delete the task, got error: %s", err))
 		logErrorAndAddDiagnostic(ctx, req, resp, err)
 		return
 	}

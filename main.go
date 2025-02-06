@@ -7,14 +7,15 @@ import (
 	"flag"
 	"log"
 
-	"terraform-provider-tasklite/internal/provider"
-
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+
+	"terraform-provider-tasklite/internal/provider"
 )
 
 var (
-	// these will be set by the goreleaser configuration
-	// to appropriate values for the compiled binary.
+	// version is set to the provider version on release, "dev" when the
+	// provider is built and ran locally, and "test" when running acceptance
+	// testing.
 	version string = "dev"
 )
 

@@ -11,5 +11,5 @@ provider "tasklite" {
 }
 
 resource "tasklite_task" "t1" {
-   title = "Task created by terraform"
+   title = "Task updated by terraform"
 }

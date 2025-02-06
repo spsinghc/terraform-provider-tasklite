@@ -10,10 +10,10 @@ import (
 )
 
 type Task struct {
-	ID        int32  `json:"id,omitempty"`
-	Title     string `json:"title"`
-	Completed bool   `json:"completed"`
-	Priority  int32  `json:"priority"`
+	ID       int32  `json:"id,omitempty"`
+	Title    string `json:"title"`
+	Complete bool   `json:"complete"`
+	Priority int32  `json:"priority"`
 }
 
 type Client struct {
@@ -64,7 +64,7 @@ func (c *Client) ReadTask(ctx context.Context, id int32) (*Task, error) {
 }
 
 func (c *Client) UpdateTask(ctx context.Context, t Task) (*Task, error) {
-	url := fmt.Sprintf("%s%d", apiPath(c.BaseURL), t.ID)
+	url := fmt.Sprintf("%s%d/", apiPath(c.BaseURL), t.ID)
 
 	resp, err := c.doRequest(ctx, http.MethodPut, url, t)
 	if err != nil {
@@ -72,7 +72,7 @@ func (c *Client) UpdateTask(ctx context.Context, t Task) (*Task, error) {
 	}
 
 	var tt Task
-	if err := c.parseResponse(resp, &t); err != nil {
+	if err := c.parseResponse(resp, &tt); err != nil {
 		return nil, err
 	}
 
