@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -24,7 +25,11 @@ func setupTestServer(t *testing.T, method string, response interface{}, statusCo
 }
 
 func TestParseResponseError(t *testing.T) {
-	server := setupTestServer(t, http.MethodGet, `Bad Request`, http.StatusBadRequest)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = io.WriteString(w, `Bad Request`)
+	}))
+
 	defer server.Close()
 	c := NewClient(server.URL)
 	req, _ := http.NewRequest(http.MethodGet, server.URL, nil)
@@ -33,8 +38,31 @@ func TestParseResponseError(t *testing.T) {
 	var task Task
 	err := c.parseResponse(resp, &task)
 	assert.Error(t, err)
-	e := fmt.Errorf("HTTP %d: %s", http.StatusBadRequest, "\"Bad Request\"\n")
+	e := fmt.Errorf("HTTP %d: %s", http.StatusBadRequest, "Bad Request")
 	assert.Equal(t, e, err)
+}
+
+func TestParseResponseSuccess(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = io.WriteString(w, `{"id":1,"title":"Test task", "priority":1, "complete":true}`)
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL)
+	req, _ := http.NewRequest(http.MethodGet, server.URL, nil)
+	resp, _ := c.HTTPClient.Do(req)
+
+	var task Task
+	err := c.parseResponse(resp, &task)
+	assert.NoError(t, err)
+
+	assert.Equal(t, Task{
+		ID:       1,
+		Title:    "Test task",
+		Priority: 1,
+		Complete: true,
+	}, task)
 }
 
 func TestCreateTask(t *testing.T) {
