@@ -123,7 +123,7 @@ func (c *Client) parseResponse(resp *http.Response, out interface{}) error {
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, body)
+		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
 	}
 
 	return json.NewDecoder(resp.Body).Decode(out)

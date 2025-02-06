@@ -3,6 +3,7 @@ package task
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -20,6 +21,20 @@ func setupTestServer(t *testing.T, method string, response interface{}, statusCo
 			json.NewEncoder(w).Encode(response)
 		}
 	}))
+}
+
+func TestParseResponseError(t *testing.T) {
+	server := setupTestServer(t, http.MethodGet, `Bad Request`, http.StatusBadRequest)
+	defer server.Close()
+	c := NewClient(server.URL)
+	req, _ := http.NewRequest(http.MethodGet, server.URL, nil)
+	resp, _ := c.HTTPClient.Do(req)
+
+	var task Task
+	err := c.parseResponse(resp, &task)
+	assert.Error(t, err)
+	e := fmt.Errorf("HTTP %d: %s", http.StatusBadRequest, "\"Bad Request\"\n")
+	assert.Equal(t, e, err)
 }
 
 func TestCreateTask(t *testing.T) {
