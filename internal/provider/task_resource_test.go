@@ -62,7 +62,8 @@ func TestAccTaskResource(t *testing.T) {
 	resourceName := "tasklite_task.test"
 	title := "Task created by terraform"
 	updatedTitle := "Updated Task by terraform"
-	c := fmt.Sprintf(providerConfigTemplate, server.URL)
+	u := server.URL
+	c := fmt.Sprintf(providerConfigTemplate, u)
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
