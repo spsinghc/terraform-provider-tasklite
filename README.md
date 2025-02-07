@@ -81,4 +81,4 @@ To generate or update documentation, run `make generate`.
 * Use `make test` to run api client unit tests.
 * user `make testacc` to run API client unit tests as well as acceptance tests for the resource.
 
-*Note:* Acceptance tests use the mock server, which can be replaced with real API server in the `internal/provider/task_resource_test.go` file. Replace `u := server.URL` with real API server URL.
+*Note:* Acceptance tests use the mock server, which can be replaced with real API server in the [task_resource_test.go](internal/provider/task_resource_test.go) file. Replace `u := server.URL` with real API server URL.
