@@ -7,7 +7,7 @@ terraform {
 }
 
 provider "tasklite" {
-  host = "http://127.0.0.1:3000"
+  host = "http://127.0.0.1:3000" # replace it with TechChallengeApp api Host
 }
 
 resource "tasklite_task" "t1" {
