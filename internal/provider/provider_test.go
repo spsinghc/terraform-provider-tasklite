@@ -4,19 +4,11 @@
 package provider
 
 import (
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
-)
-
-const (
-	providerConfig = `
-provider "tasklite" {
-  host = "http://127.0.0.1:3000"
-}`
 )
 
 // testAccProtoV6ProviderFactories is used to instantiate a provider during acceptance testing.
@@ -36,8 +28,6 @@ var testAccProtoV6ProviderFactoriesWithEcho = map[string]func() (tfprotov6.Provi
 }
 
 func testAccPreCheck(t *testing.T) {
-	_ = os.Setenv("TF_ACC", "1")
-
 	// You can add code here to run prior to any test case execution, for example assertions
 	// about the appropriate environment variables being set are common to see in a pre-check
 	// function.
