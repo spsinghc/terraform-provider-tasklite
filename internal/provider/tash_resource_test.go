@@ -66,7 +66,7 @@ func TestAccTaskResource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Step 1 - create.
+			// Create resource
 			{
 				Config: fmt.Sprintf(`%s
 resource "tasklite_task" "test" {
@@ -80,7 +80,7 @@ resource "tasklite_task" "test" {
 					resource.TestCheckResourceAttr(resourceName, "complete", "false"),
 				),
 			},
-			// Step 2 - update.
+			// Update resource
 			{
 				Config: fmt.Sprintf(`%s
 resource "tasklite_task" "test" {
@@ -96,7 +96,7 @@ resource "tasklite_task" "test" {
 					resource.TestCheckResourceAttr(resourceName, "complete", "true"),
 				),
 			},
-			// Step 3 - make no changes, check plan is empty.
+			// Make no changes, check plan is empty
 			{
 				Config: fmt.Sprintf(`%s
 resource "tasklite_task" "test" {
@@ -107,6 +107,7 @@ resource "tasklite_task" "test" {
 `, c, updatedTitle),
 				PlanOnly: true,
 			},
+			// Delete testing automatically occurs in TestCase
 		},
 	})
 }
