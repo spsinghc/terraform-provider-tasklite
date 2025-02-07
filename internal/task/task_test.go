@@ -19,7 +19,7 @@ func setupTestServer(t *testing.T, method string, response interface{}, statusCo
 		}
 		w.WriteHeader(statusCode)
 		if response != nil {
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		}
 	}))
 }
