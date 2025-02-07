@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -38,8 +39,8 @@ func (p *taskLiteProvider) Schema(_ context.Context, _ provider.SchemaRequest, r
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"host": schema.StringAttribute{
-				Description: "URI for TaskLite API.",
-				Required:    true,
+				Description: "URL for TaskLite API. May also be provided via TASKLITE_HOST environment variable.",
+				Optional:    true,
 			},
 		},
 	}
@@ -56,12 +57,36 @@ func (p *taskLiteProvider) Configure(ctx context.Context, req provider.Configure
 		return
 	}
 
-	if config.Host.IsUnknown() || config.Host.IsNull() || config.Host.ValueString() == "" {
+	if config.Host.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("host"),
-			"TaskLite API Host is unknown or empty",
-			"The provider cannot create the TaskLite API client as there is an invalid configuration value for the TaskLite API host. "+
-				"Either target apply the source of the value first, set the value statically in the configuration",
+			"Unknown API Host is unknown or empty",
+			"The provider cannot create the TaskLite API client as there is an unknown configuration value for the TaskLite API host. "+
+				"Either target apply the source of the value first, set the value statically in the configuration, "+
+				"or use the TASKLITE_HOST environment variable.",
+		)
+	}
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Default values to environment variables, but override
+	// with Terraform configuration value if set.
+
+	host := os.Getenv("TASKLITE_HOST")
+	if !config.Host.IsNull() {
+		host = config.Host.ValueString()
+	}
+	// If any of the expected configurations are missing, return
+	// errors with provider-specific guidance.
+	if host == "" {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("host"),
+			"Missing TaskLite API Host",
+			"The provider cannot create the TaskLite API client as there is a missing or empty value for the TaskLite API host. "+
+				"Set the host value in the configuration or use the TASKLITE_HOST environment variable. "+
+				"If either is already set, ensure the value is not empty.",
 		)
 	}
 
@@ -70,7 +95,7 @@ func (p *taskLiteProvider) Configure(ctx context.Context, req provider.Configure
 	}
 
 	// Create a new task client using the configuration values
-	client := task.NewClient(config.Host.ValueString())
+	client := task.NewClient(host)
 
 	resp.ResourceData = client
 
