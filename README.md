@@ -1,64 +1,84 @@
-# Terraform Provider Scaffolding (Terraform Plugin Framework)
+# Terraform TaskLite Provider
 
-_This template repository is built on the [Terraform Plugin Framework](https://github.com/hashicorp/terraform-plugin-framework). The template repository built on the [Terraform Plugin SDK](https://github.com/hashicorp/terraform-plugin-sdk) can be found at [terraform-provider-scaffolding](https://github.com/hashicorp/terraform-provider-scaffolding). See [Which SDK Should I Use?](https://developer.hashicorp.com/terraform/plugin/framework-benefits) in the Terraform documentation for additional information._
-
-This repository is a *template* for a [Terraform](https://www.terraform.io) provider. It is intended as a starting point for creating Terraform providers, containing:
-
-- A resource and a data source (`internal/provider/`),
-- Examples (`examples/`) and generated documentation (`docs/`),
-- Miscellaneous meta files.
-
-These files contain boilerplate code that you will need to edit to create your own Terraform provider. Tutorials for creating Terraform providers can be found on the [HashiCorp Developer](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework) platform. _Terraform Plugin Framework specific guides are titled accordingly._
-
-Please see the [GitHub template repository documentation](https://help.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template) for how to create a new repository from this template on GitHub.
-
-Once you've written your provider, you'll want to [publish it on the Terraform Registry](https://developer.hashicorp.com/terraform/registry/providers/publishing) so that others can use it.
-
-## Requirements
-
+## Prerequisites
 - [Terraform](https://developer.hashicorp.com/terraform/downloads) >= 1.0
 - [Go](https://golang.org/doc/install) >= 1.22
+- [TechChallengeApp](https://github.com/servian/TechChallengeApp)
 
 ## Building The Provider
 
-1. Clone the repository
-1. Enter the repository directory
-1. Build the provider using the Go `install` command:
+* Clone the repository
+* Enter the repository directory
+* Build the provider using the Go `install` command:
 
 ```shell
 go install
 ```
 
-## Adding Dependencies
-
-This provider uses [Go modules](https://github.com/golang/go/wiki/Modules).
-Please see the Go documentation for the most up to date information about using Go modules.
-
-To add a new dependency `github.com/author/dependency` to your Terraform provider:
-
-```shell
-go get github.com/author/dependency
-go mod tidy
-```
-
-Then commit the changes to `go.mod` and `go.sum`.
-
 ## Using the provider
 
-Fill this in for each provider
+To use the provider, follow the steps below:
+
+1. Update `.terraformrc` file to use `dev_overrides`. If the file `.terraformrc` doesn't exist in the home directory `~`, create one, then add the following code. Change `<PATH>` to the value returned from the `go env GOBIN` command above.
+
+```HCL
+provider_installation {
+  dev_overrides {
+      "registry.terraform.io/providers/tasklite" = "<PATH>"
+  }
+  # For all other providers, install them directly from their origin provider
+  # registries as normal. If you omit this, Terraform will _only_ use
+  # the dev_overrides block, and so no other providers will be available.
+  direct {}
+}
+```
+
+2. Initialize the provider in your Terraform configuration:
+
+```HCL
+terraform {
+  required_providers {
+    tasklite = {
+      source = "registry.terraform.io/providers/tasklite"
+    }
+  }
+}
+
+provider "tasklite" {
+  host = "<HOST>" # replace it with TechChallengeApp api url
+}
+```
+
+3. Define resources using the provider:
+
+```HCL
+resource "tasklite_task" "example" {
+    title = "Task title"
+}
+```
+
+4. Initialize Terraform and apply the configuration:
+
+```HCL
+    terraform plan # to check plan
+    terraform apply # to apply changes
+```
+
+```shell
+go install
+```
+
+Check the `docs` directory for more information on the provider.
 
 ## Developing the Provider
-
 If you wish to work on the provider, you'll first need [Go](http://www.golang.org) installed on your machine (see [Requirements](#requirements) above).
 
 To compile the provider, run `go install`. This will build the provider and put the provider binary in the `$GOPATH/bin` directory.
 
 To generate or update documentation, run `make generate`.
 
-In order to run the full suite of Acceptance tests, run `make testacc`.
+### Tests
+* Use `make test` to run api client unit tests.
+* user `make testacc` to run API client unit tests as well as acceptance tests for the resource.
 
-*Note:* Acceptance tests create real resources, and often cost money to run.
-
-```shell
-make testacc
-```
+*Note:* Acceptance tests use the mock server, which can be replaced with real API server in the `internal/provider/task_resource_test.go` file. Replace `u := server.URL` with real API server URL.
