@@ -23,11 +23,7 @@ type taskModel struct {
 	Complete types.Bool   `tfsdk:"complete"`
 }
 
-type tasksModel struct {
-	Tasks []taskModel `tfsdk:"tasks"`
-}
-
-// mapTaskToTaskModel maps api client task struct to provider task type
+// mapTaskToTaskModel maps api client task struct to provider task type.
 func mapTaskToTaskModel(t *task.Task) taskModel {
 	return taskModel{
 		ID:       types.Int32Value(t.ID),
@@ -37,7 +33,7 @@ func mapTaskToTaskModel(t *task.Task) taskModel {
 	}
 }
 
-// mapTaskModelToTask maps provider task type to api client task struct
+// mapTaskModelToTask maps provider task type to api client task struct.
 func mapTaskModelToTask(t taskModel) task.Task {
 	return task.Task{
 		ID:       t.ID.ValueInt32(),
