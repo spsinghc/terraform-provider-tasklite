@@ -13,10 +13,11 @@ import (
 )
 
 const (
-	providerConfigTemplate = `
+	providerConfig = `
 provider "tasklite" {
-  host = "%s"
-}`
+  host = "http://127.0.0.1:3000"
+}
+`
 )
 
 func newResourceServer(t *testing.T) *httptest.Server {
@@ -62,8 +63,6 @@ func TestAccTaskResource(t *testing.T) {
 	resourceName := "tasklite_task.test"
 	title := "Task created by terraform"
 	updatedTitle := "Updated Task by terraform"
-	u := server.URL
-	c := fmt.Sprintf(providerConfigTemplate, u)
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -73,7 +72,7 @@ func TestAccTaskResource(t *testing.T) {
 resource "tasklite_task" "test" {
    title = "%s"
 }
-`, c, title),
+`, providerConfig, title),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "title", title),
@@ -89,7 +88,7 @@ resource "tasklite_task" "test" {
    priority = 1
    complete = true
 }
-`, c, updatedTitle),
+`, providerConfig, updatedTitle),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "title", updatedTitle),
@@ -105,7 +104,7 @@ resource "tasklite_task" "test" {
    priority = 1
    complete = true
 }
-`, c, updatedTitle),
+`, providerConfig, updatedTitle),
 				PlanOnly: true,
 			},
 			// Delete testing automatically occurs in TestCase
